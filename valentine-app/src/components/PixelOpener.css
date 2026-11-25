@@ -1,0 +1,94 @@
+/* ═══════ Pixel openers (gift / cake / heart) ═══════ */
+
+.px-opener {
+  position: relative;
+  width: min(62vw, 250px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  image-rendering: pixelated;
+  animation: pxIdle 2.4s ease-in-out infinite;
+}
+.px-svg { width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 10px 18px rgba(60, 30, 0, 0.35)); }
+.px-shadow {
+  width: 70%;
+  height: 14px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(40, 20, 0, 0.35), transparent 70%);
+  animation: pxShadow 2.4s ease-in-out infinite;
+}
+.px-glow {
+  position: absolute;
+  inset: -20%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 240, 170, 0.55), transparent 62%);
+  opacity: 0.5;
+  pointer-events: none;
+  animation: pxGlowPulse 2.4s ease-in-out infinite;
+}
+
+/* the lid / flames / body move independently */
+.px-lid, .px-flames, .px-body { transform-box: fill-box; transform-origin: 50% 100%; }
+
+/* ── Click → shake (glow + sealBreak phases) ── */
+.px-phase-glow,
+.px-phase-sealBreak { animation: pxShake 0.32s linear infinite; }
+.px-phase-sealBreak { animation-duration: 0.18s; }
+.px-phase-glow .px-glow,
+.px-phase-sealBreak .px-glow { opacity: 1; transform: scale(1.15); transition: all 0.3s; }
+
+/* Gift: lid pops off and flies away */
+.px-gift.px-phase-flap .px-lid,
+.px-gift.px-phase-rise .px-lid {
+  animation: pxLidOff 1s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+/* Cake: candles flare, then go out in a puff */
+.px-cake .px-flames { animation: pxFlicker 0.5s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+.px-cake.px-phase-glow .px-flames,
+.px-cake.px-phase-sealBreak .px-flames { animation: pxFlare 0.2s ease-in-out infinite alternate; }
+.px-cake.px-phase-flap .px-flames,
+.px-cake.px-phase-rise .px-flames { animation: pxBlowOut 0.6s ease-out forwards; }
+
+/* Heart: beats faster, then pops */
+.px-heart { animation: pxBeat 1.1s ease-in-out infinite; }
+.px-heart.px-phase-glow,
+.px-heart.px-phase-sealBreak { animation: pxBeat 0.3s ease-in-out infinite; }
+.px-heart.px-phase-flap .px-body,
+.px-heart.px-phase-rise .px-body { animation: pxPop 0.5s ease-out forwards; }
+
+/* Burst flash when it opens */
+.px-phase-flap .px-glow { animation: pxFlash 0.9s ease-out forwards; }
+
+/* Everything fades out while the letter rises */
+.px-phase-rise { animation: pxOut 0.8s ease-in forwards; }
+
+/* The envelope wrapper's own open animations don't apply to pixel art */
+.ll-envelope.ll-pixel { transform: none !important; }
+.ll-envelope.ll-pixel .ll-env-glow { display: none; }
+
+/* ── keyframes ── */
+@keyframes pxIdle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes pxShadow { 0%, 100% { transform: scaleX(1); opacity: 1; } 50% { transform: scaleX(0.85); opacity: 0.7; } }
+@keyframes pxGlowPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.7; } }
+@keyframes pxShake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  20% { transform: translate(-4px, 1px) rotate(-5deg); }
+  40% { transform: translate(4px, -1px) rotate(5deg); }
+  60% { transform: translate(-3px, 0) rotate(-3deg); }
+  80% { transform: translate(3px, 1px) rotate(3deg); }
+}
+@keyframes pxLidOff {
+  0% { transform: translate(0, 0) rotate(0); }
+  35% { transform: translate(-2px, -9px) rotate(-14deg); }
+  100% { transform: translate(-16px, -30px) rotate(-40deg); opacity: 0; }
+}
+@keyframes pxFlicker { from { transform: scaleY(0.9); } to { transform: scaleY(1.15) translateY(-0.2px); } }
+@keyframes pxFlare { from { transform: scale(1.2, 1.5); } to { transform: scale(1.4, 1.9); } }
+@keyframes pxBlowOut { 0% { transform: scale(1.4, 1.8); opacity: 1; } 100% { transform: scale(0.2) translateY(-6px); opacity: 0; } }
+@keyframes pxBeat { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.12); } 50% { transform: scale(0.97); } 70% { transform: scale(1.08); } }
+@keyframes pxPop { 0% { transform: scale(1); } 40% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(1.7); opacity: 0; } }
+@keyframes pxFlash { 0% { opacity: 1; transform: scale(1); } 40% { opacity: 1; transform: scale(1.8); } 100% { opacity: 0; transform: scale(2.4); } }
+@keyframes pxOut { to { transform: translateY(-20px) scale(0.85); opacity: 0; } }

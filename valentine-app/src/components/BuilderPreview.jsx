@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from "react";
 import GiftRenderer from "./GiftRenderer";
+import ChristmasDecor from "./ChristmasDecor";
 
 export default function BuilderPreview() {
   const [gift, setGift] = useState(null);
@@ -60,9 +61,11 @@ export default function BuilderPreview() {
   }
 
   const themeClass = gift.theme?.className || "";
+  const isNewYear = themeClass === "theme-newyear-gold";
 
   return (
-    <div className={`gift-preview-page app ${themeClass}`}>
+    <div className={`gift-preview-page app ${themeClass}${isNewYear ? " xmas-theme" : ""}`}>
+      {isNewYear && <ChristmasDecor />}
       <GiftRenderer
         gift={gift}
         startDate={gift.startDate}

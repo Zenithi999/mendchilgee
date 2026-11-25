@@ -3,7 +3,7 @@ import { CATEGORIES } from "../templateConfigs";
 import { MdAutoAwesome, MdCheck, MdArrowForward, MdAccessTime } from "react-icons/md";
 
 // Available holiday categories
-const AVAILABLE_CATEGORIES = new Set(["march8", "soldiers-day"]);
+const AVAILABLE_CATEGORIES = new Set(["newyear", "march8", "soldiers-day", "birthday", "valentine", "general"]);
 
 export default function CategorySelector({ onSelect, onOpenBuilder }) {
   const [hovered, setHovered] = useState(null);

@@ -20,11 +20,11 @@
 .auth-page.xmas-theme { padding-top: 56px; }
 
 /* Lift real content above the decor */
-.xmas-theme > *:not(.xmas-bg):not(.xmas-top):not(.xmas-trail-layer) {
+.xmas-theme:not(.gift-preview-page) > *:not(.xmas-bg):not(.xmas-top):not(.xmas-trail-layer):not(.app-header):not(.save-greeting-fab):not(.gift-preview-unpaid-banner):not(.back-to-selector) {
   position: relative;
   z-index: 2;
 }
-.xmas-theme > .app-header { position: fixed; z-index: 1000; }
+.xmas-theme > .app-header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
 .xmas-theme .bg-effects,
 .xmas-theme .hearts-canvas,
 .xmas-theme .auth-background { display: none; }
@@ -511,4 +511,78 @@
   background: rgba(60, 10, 18, 0.8) !important;
   border-color: rgba(255, 232, 150, 0.6) !important;
   color: #fff6cf !important;
+}
+
+/* ═══════ NEW YEAR GIFT THEME (gift page + builder preview) ═══════ */
+.gift-preview-page.xmas-theme { --xmas-top: 0px; padding-top: 0; }
+.theme-newyear-gold {
+  --pink: #f3e7ae;
+  --hot-pink: #e6d690;
+  --purple: #c5b358;
+  --deep-purple: #8f7f2e;
+  --rose: #fff6c8;
+  --light-pink: #fffbe6;
+  --bg-dark: #c5b358;
+  --bg-mid: #b5a24a;
+}
+.theme-newyear-gold .btn-love,
+.theme-newyear-gold .btn-magic,
+.theme-newyear-gold .yes-btn,
+.theme-newyear-gold .wb {
+  background: linear-gradient(135deg, #c8102e, #8e0c21 55%, #0f6b3a) !important;
+  border: 1px solid rgba(255, 232, 150, 0.8);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(140, 10, 30, 0.35), 0 0 18px rgba(255, 220, 120, 0.4);
+}
+.theme-newyear-gold .timer-box,
+.theme-newyear-gold .welcome-timer-box,
+.theme-newyear-gold .summary-box {
+  background: rgba(34, 26, 6, 0.55);
+  border-color: rgba(255, 232, 150, 0.5);
+}
+.theme-newyear-gold .timer-num,
+.theme-newyear-gold .sr-val { color: #ffe58a; }
+.theme-newyear-gold .step-dot.active { background: #ffe58a; box-shadow: 0 0 12px rgba(255, 229, 138, 0.6); }
+.theme-newyear-gold .step-dot.done { background: #b3122e; }
+.theme-newyear-gold .meter-fill { background: linear-gradient(90deg, #b3122e, #c5b358, #ffe58a, #0f6b3a); }
+.theme-newyear-gold .step-option.selected,
+.theme-newyear-gold .time-chip.selected,
+.theme-newyear-gold .multi-check.checked {
+  border-color: #ffe58a;
+  background: rgba(255, 229, 138, 0.14);
+  box-shadow: 0 0 22px rgba(255, 229, 138, 0.25);
+}
+.theme-newyear-gold h1,
+.theme-newyear-gold h2 {
+  background: linear-gradient(90deg, #d9b24a, #fff7cf, #e8c862, #fffbe6, #d9b24a);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: xmasGoldText 4s linear infinite;
+  filter: drop-shadow(0 2px 0 rgba(60, 30, 0, 0.55)) drop-shadow(0 0 14px rgba(255, 220, 120, 0.45));
+}
+
+/* Gift pages: decor sits behind everything (z -1 inside the isolated page)
+   so the gift's own fixed overlays (letter, popups) keep their layout. */
+.gift-preview-page.xmas-theme .xmas-bg { z-index: -1; }
+.gift-preview-page.xmas-theme .xmas-top { z-index: 5; }
+
+/* New Year letter: no dark backdrop — the gold scene shows through */
+.theme-newyear-gold .love-letter-overlay {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Letter paper is cream: titles there stay dark red, not gold */
+.theme-newyear-gold .ll-letter h2,
+.theme-newyear-gold .ll-letter-title,
+.theme-newyear-gold .ll-title-text {
+  background: none !important;
+  -webkit-text-fill-color: #8e0c21;
+  color: #8e0c21;
+  animation: none;
+  filter: none;
 }

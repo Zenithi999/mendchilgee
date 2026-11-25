@@ -115,6 +115,9 @@ const STICKERS_FESTIVE = [
 const STICKERS_MILITARY = [
   "🎖️", "⭐", "🏅", "🛡️", "💪", "🇲🇳", "✨", "🎯", "🦅", "🏆",
 ];
+const STICKERS_XMAS = [
+  "🎄", "🎅", "❄️", "⛄", "🎁", "🔔", "⭐", "🦌", "🍬", "🧦",
+];
 const STICKERS_LOVE = [
   "💕", "💖", "💗", "💓", "💞", "💘", "❤️‍🔥", "🥰", "😘", "💋",
 ];
@@ -170,11 +173,32 @@ const WELCOME_HEART = {
   accents: ["💕", "✨", "💖", "💗"],
 };
 
+const WELCOME_TREE = {
+  type: "emoji",
+  wrapClass: "welcome-char moon-char",
+  bodyEmoji: "🎄",
+  bodyClass: "moon-body",
+  accentContainerClass: "moon-stars",
+  accentItemClass: "moon-star",
+  accents: ["⭐", "❄️", "🎁", "✨", "🔔"],
+};
+
 // ═══════════════════════════════════════════════════════════════
 // CATEGORIES
 // ═══════════════════════════════════════════════════════════════
 
 export const CATEGORIES = [
+  {
+    id: "newyear",
+    emoji: "🎄",
+    name: "Шинэ жил",
+    desc: "Шинэ оны мэнд хүргэх — гацуур, цас, алтан гялбаатай",
+    vibe: "Баяр баясгалан, гэр бүл, шинэ эхлэл",
+    gradient: "linear-gradient(135deg, #e6d690, #c5b358 50%, #8f7f2e)",
+    bgEmojis: ["🎄", "❄️", "🎁", "⭐"],
+    selectedText: "✓ Сонгогдсон",
+    selectText: "Сонгох →",
+  },
   {
     id: "march8",
     emoji: "🌷",
@@ -1243,10 +1267,218 @@ const GENERAL_TEMPLATES = [
 ];
 
 // ═══════════════════════════════════════════════════════════════
+// NEW YEAR / Шинэ жил TEMPLATES  (Vegas Gold theme)
+// ═══════════════════════════════════════════════════════════════
+
+const NEWYEAR_THEME = {
+  className: "theme-newyear-gold",
+  colors: {
+    "--t-primary": "#c5b358",
+    "--t-secondary": "#b3122e",
+    "--t-accent": "#e6d690",
+    "--t-accent2": "#0f6b3a",
+    "--t-soft": "#f3e7ae",
+    "--t-light": "#fffbe6",
+    "--t-bg": "#c5b358",
+    "--t-bg2": "#b5a24a",
+    "--t-glass": "rgba(34, 26, 6, 0.62)",
+    "--t-glass-border": "rgba(255, 240, 180, 0.45)",
+  },
+};
+
+const NEWYEAR_EFFECTS = {
+  ...DEFAULT_EFFECTS,
+  floatingHearts: ["🎄", "🎅", "❄️", "🎁", "⛄", "🔔", "⭐", "🦌", "🍬", "✨"],
+  heartRain: ["❄️", "🎄", "⭐", "🎁", "✨", "🔔", "⛄", "🍬", "🎅"],
+  confettiColors: ["#c5b358", "#e6d690", "#fff6c8", "#b3122e", "#0f6b3a", "#ffffff", "#ffd84a", "#8f7f2e"],
+  clickSparkles: ["✨", "❄️", "⭐", "🎄"],
+  flowers: [
+    { emoji: "🎄", size: 40 }, { emoji: "❄️", size: 32 }, { emoji: "🎁", size: 36 },
+    { emoji: "⭐", size: 30 }, { emoji: "🔔", size: 34 }, { emoji: "⛄", size: 38 },
+    { emoji: "🎅", size: 36 }, { emoji: "🦌", size: 34 }, { emoji: "🍬", size: 28 },
+    { emoji: "❄️", size: 26 }, { emoji: "🎄", size: 32 }, { emoji: "✨", size: 28 },
+  ],
+  leafEmoji: "❄️",
+  stickers: STICKERS_XMAS,
+};
+
+const NEWYEAR_LETTER = {
+  ...DEFAULT_LETTER_UI,
+  envelope: { emoji: "💌", text: "Нээж үзээрэй...", sparkleEmoji: "❄️" },
+  decorations: { top: "🎄", bottom: "🎁", divider: "❄" },
+  heartTrail: ["❄️", "✨", "⭐", "🎄", "🔔"],
+  closeButtonText: "Уншлаа 🎄",
+};
+
+const NEWYEAR_TIMER = { ...DEFAULT_TIMER, title: "Шинэ он хүртэл үлдсэн хугацаа" };
+
+const NEWYEAR_TEMPLATES = [
+  // ── 1. Гэр бүлдээ ──
+  {
+    id: "newyear-family",
+    category: "newyear",
+    customizer: null,
+    card: {
+      name: "Гэр бүлдээ 🎄",
+      desc: "Ээж аав, ах дүүстээ дулаахан шинэ оны мэнд",
+      preview: "🎄🏠",
+      tags: ["🏠 Гэр бүл", "✨ Алтан"],
+    },
+    theme: NEWYEAR_THEME,
+    welcome: {
+      character: { ...WELCOME_TREE },
+      title: "Шинэ оны мэнд хүргэе! 🎄",
+      subtitle: "Хайртай гэр бүлдээ шинэ оны баярын мэнд дэвшүүлье ✨",
+      timer: { ...NEWYEAR_TIMER },
+      buttonText: "Мэндчилгээ нээх 🎁",
+    },
+    loveLetter: {
+      enabled: true,
+      ...NEWYEAR_LETTER,
+      title: "Хайртай гэр бүлдээ... 🎄",
+      content:
+        "Өнгөрсөн жил хамт байсан бүх мөчид баярлалаа.\nШинэ онд эрүүл энх, аз жаргал, амар амгалан та бүхнийг тойрч байх болтугай.\nШинэ оны мэнд хүргэе! 🎄✨",
+    },
+    question: null,
+    memoryGallery: {
+      ...DEFAULT_GALLERY_UI,
+      headerIcon: "🎄",
+      headerTitle: "Энэ оны дурсамжууд ✨",
+      footerText: "Дурсамж бүр алт шиг үнэтэй... ✨",
+      continueButton: "Үргэлжлүүлэх ❄️",
+      memories: [
+        { type: "image", src: "", date: "Хамтын мөч", caption: "Гэр бүлээрээ 🏠" },
+        { type: "image", src: "", date: "Дурсамж", caption: "Хамгийн сайхан өдөр 🎄" },
+      ],
+    },
+    finalSummary: {
+      ...DEFAULT_FINAL_UI,
+      headerEmoji: "🎄",
+      title: "Шинэ оны мэнд! 🎄",
+      subtitle: "Аз жаргал, эрүүл энхийг хүсье!",
+      dateRow: { emoji: "🎆", label: "Баяр", value: "Шинэ жил ✨" },
+      meter: { label: "Шинэ оны хүсэл", text: "♾️ Хязгааргүй" },
+      summaryFields: [],
+      quotes: [
+        "Гэр бүл бол хамгийн том бэлэг 🎁",
+        "Шинэ он — шинэ итгэл найдвар ✨",
+        "Хамтдаа байх нь хамгийн сайхан баяр 🎄",
+      ],
+      footer: "Шинэ жил © 2027 • mendchilgee.site",
+    },
+    effects: NEWYEAR_EFFECTS,
+  },
+
+  // ── 2. Хайртдаа ──
+  {
+    id: "newyear-love",
+    category: "newyear",
+    customizer: null,
+    card: {
+      name: "Хайртдаа ❄️",
+      desc: "Хайртай хүндээ романтик шинэ оны мэндчилгээ",
+      preview: "❄️💕",
+      tags: ["💕 Хайр", "❄️ Цастай"],
+    },
+    theme: NEWYEAR_THEME,
+    welcome: {
+      character: { ...WELCOME_TREE, bodyEmoji: "⛄", accents: ["💕", "❄️", "✨", "⭐", "🎁"] },
+      title: "Хайрт минь, шинэ оны мэнд! ❄️",
+      subtitle: "Шинэ оныг чамтай хамт угтах сайхан байна 💕",
+      timer: { ...NEWYEAR_TIMER },
+      buttonText: "Нээгээд үзээрэй 💌",
+    },
+    loveLetter: {
+      enabled: true,
+      ...NEWYEAR_LETTER,
+      decorations: { top: "❄️", bottom: "💕", divider: "♥" },
+      title: "Хайрт минь... 💌",
+      content:
+        "Энэ жил чамтай хамт байсан өдөр бүр миний хамгийн сайхан бэлэг байлаа.\nШинэ онд ч гэсэн гараа барьж, хамтдаа олон сайхан дурсамж бүтээе.\nШинэ оны мэнд, хайрт минь! ❄️💕",
+    },
+    question: null,
+    memoryGallery: {
+      ...DEFAULT_GALLERY_UI,
+      headerIcon: "❄️",
+      headerTitle: "Бидний энэ жил 💕",
+      continueButton: "Үргэлжлүүлэх ✨",
+      memories: [
+        { type: "image", src: "", date: "Бид хоёр", caption: "Хамтдаа ❄️" },
+        { type: "image", src: "", date: "Дурсамж", caption: "Хамгийн дулаахан өвөл 💕" },
+      ],
+    },
+    finalSummary: {
+      ...DEFAULT_FINAL_UI,
+      headerEmoji: "❄️",
+      title: "Шинэ оны мэнд, хайрт минь! 💕",
+      subtitle: "Шинэ онд ч чамтай хамт",
+      dateRow: { emoji: "🎆", label: "Баяр", value: "Шинэ жил ❄️" },
+      meter: { label: "Хайр", text: "♾️ Хязгааргүй" },
+      summaryFields: [],
+      quotes: [
+        "Чамтай хамт өвөл ч дулаахан 💕",
+        "Шинэ он, хуучин хайр ❄️",
+        "Чи бол миний хамгийн сайхан бэлэг 🎁",
+      ],
+      footer: "Шинэ жил © 2027 • mendchilgee.site",
+    },
+    effects: { ...NEWYEAR_EFFECTS, floatingHearts: ["❄️", "💕", "⛄", "✨", "🎄", "💖", "⭐", "🎁", "💗", "🔔"] },
+  },
+
+  // ── 3. Найз нөхөд, хамт олондоо ──
+  {
+    id: "newyear-friends",
+    category: "newyear",
+    customizer: null,
+    card: {
+      name: "Найз нөхөд, хамт олондоо 🥂",
+      desc: "Найзууд, хамтран ажиллагсаддаа шинэ оны мэнд",
+      preview: "🥂🎆",
+      tags: ["🥂 Найзууд", "🎆 Баяр"],
+    },
+    theme: NEWYEAR_THEME,
+    welcome: {
+      character: { ...WELCOME_TREE, bodyEmoji: "🎅", accents: ["🥂", "🎆", "✨", "⭐", "🎁"] },
+      title: "Шинэ оны мэнд! 🎆",
+      subtitle: "Хамтдаа өнгөрүүлсэн гайхалтай жилд баярлалаа 🥂",
+      timer: { ...NEWYEAR_TIMER },
+      buttonText: "Мэндчилгээ нээх 🎉",
+    },
+    loveLetter: {
+      enabled: true,
+      ...NEWYEAR_LETTER,
+      decorations: { top: "🎆", bottom: "🥂", divider: "✦" },
+      title: "Хүндэт найз нөхөд минь... 🥂",
+      content:
+        "Энэ жил хамтдаа даван туулсан бүх зүйлд баярлалаа.\nШинэ онд илүү их амжилт, инээд хөөр, шинэ адал явдал хүсье.\nШинэ оны мэнд хүргэе! 🎆✨",
+    },
+    question: null,
+    memoryGallery: null,
+    finalSummary: {
+      ...DEFAULT_FINAL_UI,
+      headerEmoji: "🎆",
+      title: "Шинэ оны мэнд! 🥂",
+      subtitle: "Амжилт, аз жаргал хүсье!",
+      dateRow: { emoji: "🎆", label: "Баяр", value: "Шинэ жил 🥂" },
+      meter: { label: "Амжилт", text: "🚀 Дээд зэргийн" },
+      summaryFields: [],
+      quotes: [
+        "Шинэ он — шинэ амжилт! 🚀",
+        "Хамтдаа бүх зүйл боломжтой 🥂",
+        "Ирэх жил илүү гэрэлтэй байг ✨",
+      ],
+      footer: "Шинэ жил © 2027 • mendchilgee.site",
+    },
+    effects: { ...NEWYEAR_EFFECTS, floatingHearts: ["🎆", "🎇", "🥂", "✨", "🎄", "⭐", "🎁", "🎉", "❄️", "🔔"] },
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════
 // EXPORTS
 // ═══════════════════════════════════════════════════════════════
 
 export const CATEGORIES_CONFIG = {
+  "newyear": NEWYEAR_TEMPLATES,
   "march8": MARCH8_TEMPLATES,
   "soldiers-day": SOLDIERS_DAY_TEMPLATES,
   "birthday": BIRTHDAY_TEMPLATES,

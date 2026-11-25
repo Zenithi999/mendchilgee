@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import ContinueArrow from "./ContinueArrow";
+import PixelOpener from "./PixelOpener";
+
+/** Which pixel opener a holiday uses (null = classic envelope). */
+const OPENERS = { newyear: "gift", general: "gift", birthday: "cake", valentine: "heart" };
+const openerForCategory = (category) => OPENERS[category] || null;
 
 /* ─────────────────────────────────────────────────────
    LoveLetter — Dreamy cinematic envelope → letter reveal
@@ -14,6 +19,26 @@ const EMOJI_SETS = {
     particles: ["⭐", "🎖️", "✨", "🏅", "💫", "🛡️", "🦅", "⚔️", "🌟", "🎗️", "🏆", "💪"],
     petals: ["⭐", "🎖️", "🌟", "✨"],
   },
+  newyear: {
+    particles: ["🎄", "🎅", "❄️", "🎁", "⛄", "🔔", "⭐", "🦌", "🍬", "🧦", "✨", "🎀", "🤶", "🌟"],
+    petals: ["❄️", "✨", "❄️", "⭐"],
+  },
+  march8: {
+    particles: ["🌷", "🌸", "💐", "🌹", "🌺", "💝", "✨", "🌼", "💮", "🏵️", "💕", "🦋"],
+    petals: ["🌸", "🌷", "💮", "🌺"],
+  },
+  birthday: {
+    particles: ["🎂", "🎈", "🎉", "🎁", "🎊", "🧁", "🍰", "✨", "🥳", "🎀", "⭐", "🪅"],
+    petals: ["🎈", "🎊", "✨", "🎉"],
+  },
+  valentine: {
+    particles: ["❤️", "💕", "💖", "💘", "💗", "💓", "🌹", "😘", "💝", "✨", "💞", "🥰"],
+    petals: ["💕", "❤️", "🌹", "💗"],
+  },
+  general: {
+    particles: ["🎊", "🎉", "✨", "🎈", "⭐", "💫", "🎁", "🏆", "🌟", "🎀", "🥂", "🪅"],
+    petals: ["✨", "🎊", "⭐", "💫"],
+  },
 };
 
 export default function LoveLetter({ letter, onClose, onMusicStart, category }) {
@@ -25,22 +50,30 @@ export default function LoveLetter({ letter, onClose, onMusicStart, category }) 
   const [contentRevealed, setContentRevealed] = useState(false);
 
   const emojiSet = EMOJI_SETS[category] || EMOJI_SETS.default;
+  const opener = openerForCategory(category); // "gift" | "cake" | "heart" | null
 
   /* ── Burst particles (emoji confetti on open) ── */
   const particles = useMemo(() => {
     const emojis = emojiSet.particles;
-    return Array.from({ length: 32 }, (_, i) => ({
-      id: i,
-      emoji: emojis[i % emojis.length],
-      x: 30 + Math.random() * 40,      // cluster near center
-      y: 30 + Math.random() * 40,
-      size: 0.7 + Math.random() * 0.8,
-      delay: Math.random() * 0.8,
-      dur: 1.8 + Math.random() * 2.2,
-      dx: -120 + Math.random() * 240,
-      dy: -160 + Math.random() * 80,
-      rot: Math.random() * 520 - 260,
-    }));
+    // Explosion from the envelope: two waves flying out in every direction
+    const COUNT = 64;
+    return Array.from({ length: COUNT }, (_, i) => {
+      const angle = (i / (COUNT / 2)) * Math.PI * 2 + Math.random() * 0.4;
+      const wave = i < COUNT / 2 ? 0 : 1;
+      const dist = 160 + Math.random() * 340;
+      return {
+        id: i,
+        emoji: emojis[Math.floor(Math.random() * emojis.length)],
+        x: 47 + Math.random() * 6,
+        y: 42 + Math.random() * 6,
+        size: 0.8 + Math.random() * 1.1,
+        delay: wave * 0.45 + Math.random() * 0.25,
+        dur: 1.6 + Math.random() * 1.6,
+        dx: Math.cos(angle) * dist,
+        dy: Math.sin(angle) * dist - 60 + Math.random() * 40,
+        rot: Math.random() * 720 - 360,
+      };
+    });
   }, [emojiSet]);
 
   /* ── Falling petals (continuous ambient) ── */
@@ -97,6 +130,8 @@ export default function LoveLetter({ letter, onClose, onMusicStart, category }) 
   const decorations = letter.decorations || {};
   const heartTrail = letter.heartTrail || ["❤️", "💕", "💖", "💗", "💓"];
   const isOpening = ["glow", "sealBreak", "flap", "rise"].includes(phase);
+  // Pixel openers burst when they actually open (lid off / candles out / pop)
+  const showBurst = opener ? ["flap", "rise", "letterIn"].includes(phase) : isOpening || phase === "letterIn";
 
   return (
     <div
@@ -126,7 +161,7 @@ export default function LoveLetter({ letter, onClose, onMusicStart, category }) 
       {showLightBurst && <div className="ll-light-burst" />}
 
       {/* ── Burst particles on open ── */}
-      {(isOpening || phase === "letterIn") && (
+      {showBurst && (
         <div className="ll-particles">
           {particles.map((p) => (
             <span
@@ -154,10 +189,13 @@ export default function LoveLetter({ letter, onClose, onMusicStart, category }) 
         {/* ══════ ENVELOPE PHASE ══════ */}
         {(phase === "envelope" || isOpening) && (
           <div
-            className={`ll-envelope ${isOpening ? "ll-opening" : ""} ${phase === "glow" ? "ll-glowing" : ""}`}
+            className={`ll-envelope${opener ? " ll-pixel" : ""} ${isOpening ? "ll-opening" : ""} ${phase === "glow" ? "ll-glowing" : ""}`}
             onClick={phase === "envelope" ? handleOpenEnvelope : undefined}
           >
-            {/* 3D Scene */}
+            {opener ? (
+              <PixelOpener kind={opener} phase={phase} />
+            ) : (
+            /* 3D Scene */
             <div className="ll-env-scene">
               <div className="ll-env-3d">
                 <div className="ll-env-back">
@@ -205,6 +243,7 @@ export default function LoveLetter({ letter, onClose, onMusicStart, category }) 
                 <div className="ll-env-side-r" />
               </div>
             </div>
+            )}
 
             {/* Invitation text with hand icon */}
             {phase === "envelope" && (

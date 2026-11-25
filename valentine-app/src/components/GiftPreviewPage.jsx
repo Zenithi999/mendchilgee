@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getGift, incrementViewCount, markGiftExpired } from "../services/giftService";
 import { updateGift } from "../services/giftService";
 import GiftRenderer from "./GiftRenderer";
+import ChristmasDecor from "./ChristmasDecor";
 import { useAuth } from "../contexts/AuthContext";
 import { isPaymentExpired } from "../utils/tierUtils";
 import { saveGreetingAsImage } from "../utils/saveGreeting";
@@ -294,7 +295,11 @@ export default function GiftPreviewPage() {
   }
 
   return (
-    <div ref={pageRef} className={`gift-preview-page app ${gift.theme?.className || ""}`}>
+    <div
+      ref={pageRef}
+      className={`gift-preview-page app ${gift.theme?.className || ""}${gift.theme?.className === "theme-newyear-gold" ? " xmas-theme" : ""}`}
+    >
+      {gift.theme?.className === "theme-newyear-gold" && <ChristmasDecor />}
       {/* Floating save button */}
       <button
         className={`save-greeting-fab ${savedImg ? "save-greeting-fab-done" : ""}`}
