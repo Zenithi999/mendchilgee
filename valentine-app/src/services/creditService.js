@@ -1,67 +1,59 @@
 // ═══════════════════════════════════════════════════════════════
-// Credit Service — Manage user credits, promo codes, BYL purchases
+// Credit Service — user credits, promo codes, BYL purchases
 // ═══════════════════════════════════════════════════════════════
 
-import { doc, onSnapshot, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../firebase";
-
-const FUNCTIONS_BASE =
-  import.meta.env.VITE_FUNCTIONS_BASE_URL ||
-  `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
+import { supabase, apiFetch } from "../supabase";
+import { getDoc, subscribe } from "../lib/docs";
 
 // ── Credits ──────────────────────────────────────────────────
 
 /**
- * Subscribe to user credits in real-time.
- * Returns an unsubscribe function.
+ * Subscribe to user credits in real-time. Returns an unsubscribe function.
  */
 export function subscribeToCredits(userId, callback) {
-  return onSnapshot(doc(db, "userProfiles", userId), (snap) => {
-    if (snap.exists()) {
-      callback(snap.data().credits || 0);
-    } else {
-      callback(0);
-    }
-  });
+  return subscribe(
+    "profiles",
+    async () => {
+      const row = await getDoc("profiles", userId);
+      callback(row?.data?.credits || 0);
+    },
+    `id=eq.${userId}`,
+  );
 }
 
 /**
  * Get user credits once.
  */
 export async function getUserCredits(userId) {
-  const snap = await getDoc(doc(db, "userProfiles", userId));
-  if (snap.exists()) return snap.data().credits || 0;
-  return 0;
+  const row = await getDoc("profiles", userId);
+  return row?.data?.credits || 0;
 }
 
 /**
- * Initialize user profile if it doesn't exist.
+ * Profiles are created automatically for every new account (DB trigger).
+ * Kept for backward compatibility.
  */
-export async function ensureUserProfile(userId) {
-  const ref = doc(db, "userProfiles", userId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
-    await setDoc(ref, { credits: 0 }, { merge: true });
-  }
-}
+export async function ensureUserProfile() {}
 
 // ── Promo Codes ──────────────────────────────────────────────
 
+const PROMO_MESSAGES = {
+  missing_params: "Промо код эсвэл хэрэглэгчийн мэдээлэл дутуу байна",
+  invalid_code: "Промо код олдсонгүй",
+  code_inactive: "Промо код идэвхгүй байна",
+  already_used: "Та энэ промо кодыг аль хэдийн ашигласан байна",
+  code_exhausted: "Промо кодын хэрэглээний лимит дууссан байна",
+};
+
 /**
- * Redeem a promo code via cloud function.
+ * Redeem a promo code for the signed-in user.
  * Returns { success: true, newCredits: number } on success.
  * Throws Error with Mongolian message on failure.
  */
-export async function redeemPromoCode(code, userId) {
-  const res = await fetch(`${FUNCTIONS_BASE}/redeemPromoCode`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, userId }),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || "Промо код алдаатай байна");
-  }
+export async function redeemPromoCode(code) {
+  const { data, error } = await supabase.rpc("redeem_promo_code", { p_code: code });
+  if (error) throw new Error("Серверийн алдаа. Дахин оролдоно уу.");
+  if (data?.error) throw new Error(PROMO_MESSAGES[data.error] || "Промо код алдаатай байна");
   return data;
 }
 
@@ -71,11 +63,10 @@ export async function redeemPromoCode(code, userId) {
  * Create a BYL checkout for purchasing credits.
  * Returns { checkoutUrl, client_reference_id }
  */
-export async function createCreditCheckout(userId, quantity = 1) {
-  const res = await fetch(`${FUNCTIONS_BASE}/createCreditCheckout`, {
+export async function createCreditCheckout(_userId, quantity = 1) {
+  const res = await apiFetch("/createCreditCheckout", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, quantity }),
+    body: JSON.stringify({ quantity }),
   });
   const data = await res.json();
   if (!res.ok) {
@@ -89,11 +80,8 @@ export async function createCreditCheckout(userId, quantity = 1) {
  * Returns { status: "pending"|"paid", quantity, amount }
  */
 export async function checkCreditPayment(clientRef) {
-  const res = await fetch(
-    `${FUNCTIONS_BASE}/checkCreditPayment?ref=${encodeURIComponent(clientRef)}`,
-  );
-  const data = await res.json();
-  return data;
+  const res = await apiFetch(`/checkCreditPayment?ref=${encodeURIComponent(clientRef)}`);
+  return res.json();
 }
 
 // ── Credit Consumption ───────────────────────────────────────
@@ -102,15 +90,15 @@ export async function checkCreditPayment(clientRef) {
  * Use 1 credit to activate a gift (remove watermark).
  * Returns { success: true, remainingCredits: number }
  */
-export async function useCredit(userId, giftId) {
-  const res = await fetch(`${FUNCTIONS_BASE}/useCredit`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, giftId }),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || "Эрх ашиглахад алдаа гарлаа");
+export async function useCredit(_userId, giftId) {
+  const { data, error } = await supabase.rpc("use_credit", { p_gift_id: giftId });
+  if (error) throw new Error("Эрх ашиглахад алдаа гарлаа");
+  if (data?.error) {
+    throw new Error(
+      data.error === "no_credits"
+        ? "Эрх хүрэлцэхгүй байна. Эрх худалдаж авна уу."
+        : "Эрх ашиглахад алдаа гарлаа",
+    );
   }
   return data;
 }

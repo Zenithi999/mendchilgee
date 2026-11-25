@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getGift, incrementViewCount } from "../services/giftService";
+import { getGift, incrementViewCount, markGiftExpired } from "../services/giftService";
 import { updateGift } from "../services/giftService";
 import GiftRenderer from "./GiftRenderer";
 import { useAuth } from "../contexts/AuthContext";
@@ -78,13 +78,8 @@ export default function GiftPreviewPage() {
           if (!data.paymentExpired && isPaymentExpired(data)) {
             data.paymentExpired = true;
             data.paidTier = "free";
-            // Persist expiration to Firestore (fire-and-forget)
-            updateGift(giftId, {
-              paymentExpired: true,
-              paidTier: "free",
-            }).catch((err) =>
-              console.warn("Failed to persist expiration:", err),
-            );
+            // Persist expiration (fire-and-forget)
+            markGiftExpired(giftId);
           }
 
           setGift(data);
@@ -163,7 +158,7 @@ export default function GiftPreviewPage() {
   const isInIframe = window.self !== window.top;
 
   // Auto-heal: if gift is activated but status is still "draft", fix it
-  if (gift && isActivated && gift.status === "draft") {
+  if (gift && isActivated && gift.status === "draft" && isOwner) {
     updateGift(giftId, { status: "published" }).catch((err) =>
       console.warn("Failed to auto-heal gift status:", err),
     );

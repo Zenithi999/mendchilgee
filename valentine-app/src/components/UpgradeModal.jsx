@@ -16,10 +16,8 @@ import {
 } from "../config/plans";
 import { MdAutoAwesome, MdPhotoCamera, MdVideocam } from "react-icons/md";
 import "./UpgradeModal.css";
+import { apiFetch } from "../supabase";
 
-const FUNCTIONS_BASE =
-  import.meta.env.VITE_FUNCTIONS_BASE_URL ||
-  `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
 
 /**
  * UpgradeModal
@@ -72,11 +70,9 @@ export default function UpgradeModal({ open, onClose, gift, giftId, onActivated 
     setError(null);
 
     try {
-      const res = await fetch(`${FUNCTIONS_BASE}/createCreditCheckout`, {
+      const res = await apiFetch("/createCreditCheckout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.uid,
           type: "gift",
           giftId,
           imageCount,

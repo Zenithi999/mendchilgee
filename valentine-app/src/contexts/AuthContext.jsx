@@ -11,8 +11,7 @@ import {
   saveTermsAgreement,
 } from "../services/firestoreService";
 import { TERMS_VERSION } from "../legal/terms";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase";
+import { getDoc, subscribe } from "../lib/docs";
 
 const AuthContext = createContext(null);
 
@@ -64,19 +63,19 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    const unsubscribe = onSnapshot(doc(db, "userProfiles", user.uid), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setCredits(data.credits || 0);
-        setRole(data.role || null);
-      } else {
-        setCredits(0);
-        setRole(null);
-      }
-    });
-
+    const uid = user.uid;
+    const unsubscribe = subscribe(
+      "profiles",
+      async () => {
+        const row = await getDoc("profiles", uid);
+        setCredits(row?.data?.credits || 0);
+        setRole(row?.data?.role || null);
+      },
+      `id=eq.${uid}`,
+    );
     return () => unsubscribe();
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resubscribe only when the account changes
+  }, [user?.uid, user?.isAnonymous]);
 
   // Accept updated terms
   const acceptTerms = async () => {

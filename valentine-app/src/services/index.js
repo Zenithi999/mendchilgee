@@ -1,5 +1,5 @@
-// Firebase core exports
-export { auth, db } from "../firebase";
+// Supabase core exports
+export { supabase } from "../supabase";
 
 // Auth service exports
 export {
@@ -11,25 +11,10 @@ export {
   getCurrentUser,
 } from "./authService";
 
-// Firestore service exports
-export {
-  addDocument,
-  setDocument,
-  getDocument,
-  getDocuments,
-  queryDocuments,
-  updateDocument,
-  deleteDocument,
-  subscribeToDocument,
-  subscribeToCollection,
-  saveValentineResponse,
-  getValentineResponse,
-  saveMemory,
-  getMemories,
-  subscribeToMemories,
-} from "./firestoreService";
+// Profile / terms exports
+export { getUserProfile, saveTermsAgreement, getTermsAgreement } from "./firestoreService";
 
-// Storage / Cloudinary service exports
+// Storage exports
 export {
   uploadFile,
   uploadFileWithProgress,
@@ -37,10 +22,6 @@ export {
   uploadMemoryPhotoWithProgress,
   uploadMemoryVideo,
   uploadCouplePhoto,
-} from "./cloudinaryService";
-
-// Cloudinary URL optimization helpers
-export {
   optimizedImageUrl,
   optimizedVideoUrl,
   videoThumbnailUrl,

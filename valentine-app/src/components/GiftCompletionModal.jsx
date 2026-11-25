@@ -38,10 +38,8 @@ import {
   MdWarning,
 } from "react-icons/md";
 import "./GiftCompletionModal.css";
+import { apiFetch } from "../supabase";
 
-const FUNCTIONS_BASE =
-  import.meta.env.VITE_FUNCTIONS_BASE_URL ||
-  `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
 
 const SHAPES = QR_SHAPES.map((s) => ({
   key: s.id,
@@ -156,11 +154,9 @@ export default function GiftCompletionModal({
       }
 
       // Step 2: Create BYL checkout
-      const res = await fetch(`${FUNCTIONS_BASE}/createCreditCheckout`, {
+      const res = await apiFetch("/createCreditCheckout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.uid,
           type: "gift",
           giftId: docId,
           imageCount,

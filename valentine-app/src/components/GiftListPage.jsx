@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getUserGifts, deleteGift } from "../services/giftService";
+import { toDate } from "../lib/docs";
 import { generateShapedQR } from "../utils/heartQr";
 import { MdMail, MdEdit, MdVisibility, MdSend, MdDelete, MdClose, MdAutoAwesome, MdFavorite, MdDownload, MdPrint, MdLock } from "react-icons/md";
 import "./GiftListPage.css";
@@ -36,8 +37,8 @@ export default function GiftListPage({ onCreateNew, onEditGift }) {
       const result = await getUserGifts(user.uid);
       // Sort by updatedAt descending
       result.sort((a, b) => {
-        const ta = a.updatedAt?.toDate?.() || new Date(0);
-        const tb = b.updatedAt?.toDate?.() || new Date(0);
+        const ta = toDate(a.updatedAt) || new Date(0);
+        const tb = toDate(b.updatedAt) || new Date(0);
         return tb - ta;
       });
       setGifts(result);
@@ -164,7 +165,7 @@ p{font-size:0.82rem;color:#888;word-break:break-all}
 
   const formatDate = (timestamp) => {
     if (!timestamp) return "";
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const date = toDate(timestamp);
     return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",

@@ -3,17 +3,8 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  collection,
-  onSnapshot,
-  doc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db } from "../firebase";
+import { supabase } from "../supabase";
+import { getDoc, listDocs, mergeDoc, deleteDoc, subscribe, rowToDoc, nowIso, toMillis } from "../lib/docs";
 import { generateShapedQR, QR_SHAPES } from "../utils/heartQr";
 import {
   MdAdd,
@@ -120,10 +111,8 @@ export default function AdminPromoPanel({ onBack }) {
 
   // Load saved webhook URL from Firestore
   useEffect(() => {
-    getDoc(doc(db, "appSettings", "webhook")).then((snap) => {
-      if (snap.exists()) {
-        setWebhookUrl(snap.data().url || "");
-      }
+    getDoc("app_settings", "webhook").then((row) => {
+      if (row) setWebhookUrl(row.data?.url || "");
     }).catch(() => {});
   }, []);
 
@@ -131,10 +120,10 @@ export default function AdminPromoPanel({ onBack }) {
   const saveWebhookUrl = async () => {
     setWebhookSaving(true);
     try {
-      await setDoc(doc(db, "appSettings", "webhook"), {
+      await mergeDoc("app_settings", "webhook", {
         url: webhookUrl.trim(),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+        updatedAt: nowIso(),
+      });
       setWebhookSaved(true);
       setTimeout(() => setWebhookSaved(false), 2000);
     } catch (err) {
@@ -146,12 +135,9 @@ export default function AdminPromoPanel({ onBack }) {
 
   // Subscribe to promoCodes collection
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "promoCodes"), (snap) => {
-      const codes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      codes.sort(
-        (a, b) =>
-          (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0),
-      );
+    const unsubscribe = subscribe("promo_codes", async () => {
+      const codes = (await listDocs("promo_codes")).map(rowToDoc);
+      codes.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
       setPromoCodes(codes);
       setLoading(false);
 
@@ -164,10 +150,10 @@ export default function AdminPromoPanel({ onBack }) {
 
   // ── Live subscription: gifts collection ──
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "gifts"), (snap) => {
-      const docs = snap.docs.map((d) => d.data());
-      const totalGifts = docs.length;
-      const totalViews = docs.reduce((sum, g) => sum + (g.viewCount || 0), 0);
+    const unsubscribe = subscribe("gifts", async () => {
+      const rows = await listDocs("gifts", "id, view_count");
+      const totalGifts = rows.length;
+      const totalViews = rows.reduce((sum, g) => sum + (g.view_count || 0), 0);
       setStats((prev) => ({ ...prev, totalGifts, totalViews }));
       setStatsLoading(false);
     });
@@ -176,9 +162,9 @@ export default function AdminPromoPanel({ onBack }) {
 
   // ── Live subscription: paid purchases + top buyers + today's revenue (single listener) ──
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "credit_payments"), (snap) => {
-      const paidDocs = snap.docs
-        .map((d) => ({ docId: d.id, ...d.data() }))
+    const unsub = subscribe("credit_payments", async () => {
+      const paidDocs = (await listDocs("credit_payments"))
+        .map((r) => ({ docId: r.id, ...r.data, userId: r.user_id || r.data?.userId }))
         .filter((d) => d.status === "paid");
 
       // Stats: revenue from actual payment amounts
@@ -189,7 +175,7 @@ export default function AdminPromoPanel({ onBack }) {
 
       // Filter transactions since launch
       const recentDocs = paidDocs.filter((d) => {
-        const ts = d.paidAt?.toMillis?.() || d.createdAt?.toMillis?.() || 0;
+        const ts = toMillis(d.paidAt) || toMillis(d.createdAt);
         return ts >= launchStart;
       });
 
@@ -212,7 +198,7 @@ export default function AdminPromoPanel({ onBack }) {
           giftId: d.giftId || d.meta?.giftId || null,
           imageCount: d.meta?.imageCount || d.imageCount || 0,
           totalVideoSeconds: d.meta?.totalVideoSeconds || d.totalVideoSeconds || 0,
-          time: d.paidAt?.toMillis?.() || d.createdAt?.toMillis?.() || 0,
+          time: toMillis(d.paidAt) || toMillis(d.createdAt),
         }))
         .sort((a, b) => b.time - a.time);
       setTodayTransactions(txns);
@@ -227,7 +213,7 @@ export default function AdminPromoPanel({ onBack }) {
         userMap[uid].purchases += 1;
         userMap[uid].totalCredits += d.quantity || 1;
         userMap[uid].totalSpent += d.totalAmount || d.amount || 0;
-        const paidAt = d.paidAt?.toMillis?.() || 0;
+        const paidAt = toMillis(d.paidAt);
         if (!userMap[uid].lastPurchase || paidAt > userMap[uid].lastPurchase) {
           userMap[uid].lastPurchase = paidAt;
         }
@@ -243,9 +229,14 @@ export default function AdminPromoPanel({ onBack }) {
 
   // ── Live subscription: userProfiles collection ──
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "userProfiles"), (snap) => {
-      setStats((prev) => ({ ...prev, totalUsers: snap.size }));
-    });
+    const loadUsers = async () => {
+      const { count, error } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true });
+      if (error) throw error;
+      setStats((prev) => ({ ...prev, totalUsers: count || 0 }));
+    };
+    const unsubscribe = subscribe("profiles", loadUsers);
     return () => unsubscribe();
   }, []);
 
@@ -275,13 +266,17 @@ export default function AdminPromoPanel({ onBack }) {
     setError(null);
 
     try {
-      await setDoc(doc(db, "promoCodes", code), {
-        active: true,
-        credits: newCredits,
-        maxUses: newMaxUses,
-        currentUses: 0,
-        createdAt: serverTimestamp(),
+      const { error: insertError } = await supabase.from("promo_codes").insert({
+        id: code,
+        data: {
+          active: true,
+          credits: newCredits,
+          maxUses: newMaxUses,
+          currentUses: 0,
+          createdAt: nowIso(),
+        },
       });
+      if (insertError) throw insertError;
 
       setNewCode("");
       setNewCredits(1);
@@ -297,9 +292,7 @@ export default function AdminPromoPanel({ onBack }) {
   // Toggle active state
   const toggleActive = async (code, currentActive) => {
     try {
-      await updateDoc(doc(db, "promoCodes", code), {
-        active: !currentActive,
-      });
+      await mergeDoc("promo_codes", code, { active: !currentActive });
     } catch (err) {
       console.error("Toggle error:", err);
     }
@@ -309,7 +302,7 @@ export default function AdminPromoPanel({ onBack }) {
   const handleDelete = async (code) => {
     if (!window.confirm(`"${code}" промо кодыг устгах уу?`)) return;
     try {
-      await deleteDoc(doc(db, "promoCodes", code));
+      await deleteDoc("promo_codes", code);
     } catch (err) {
       console.error("Delete error:", err);
     }

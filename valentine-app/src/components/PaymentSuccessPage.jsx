@@ -3,10 +3,8 @@ import { useSearchParams, Link } from "react-router-dom";
 import { BASE_PRICE, INCLUDED_IMAGES, EXTRA_IMAGE_PRICE, EXTRA_VIDEO_PRICE } from "../config/plans";
 import { MdHelp, MdCelebration, MdAutoAwesome, MdSearch, MdPayment, MdReceipt, MdPhotoCamera, MdVideocam, MdCheckCircle } from "react-icons/md";
 import "./DemoPaymentPage.css";
+import { apiFetch } from "../supabase";
 
-const FUNCTIONS_BASE =
-  import.meta.env.VITE_FUNCTIONS_BASE_URL ||
-  `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
 
 export default function PaymentSuccessPage() {
   const [searchParams] = useSearchParams();
@@ -27,8 +25,8 @@ export default function PaymentSuccessPage() {
 
     // Pick the right endpoint: credit purchases vs tier payments
     const endpoint = isCredit
-      ? `${FUNCTIONS_BASE}/checkCreditPayment?ref=${encodeURIComponent(ref)}`
-      : `${FUNCTIONS_BASE}/checkPaymentStatus?ref=${encodeURIComponent(ref)}`;
+      ? `/checkCreditPayment?ref=${encodeURIComponent(ref)}`
+      : `/checkPaymentStatus?ref=${encodeURIComponent(ref)}`;
 
     async function poll() {
       let tries = 0;
@@ -36,7 +34,7 @@ export default function PaymentSuccessPage() {
         tries++;
         setAttempts(tries);
         try {
-          const r = await fetch(endpoint);
+          const r = await apiFetch(endpoint);
           if (!r.ok) break;
           const j = await r.json();
           if (j.status === "paid") {

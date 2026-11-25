@@ -73,6 +73,9 @@ const AuthPage = ({ onAuthSuccess }) => {
         case "auth/invalid-credential":
           setError("И-мэйл эсвэл нууц үг буруу байна");
           break;
+        case "auth/email-not-confirmed":
+          setError("И-мэйлээ шалгаж, баталгаажуулах линк дээр дарна уу");
+          break;
         default:
           setError(err.message || "Нэвтрэлт амжилтгүй боллоо");
       }

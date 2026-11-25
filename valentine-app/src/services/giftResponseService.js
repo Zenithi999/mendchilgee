@@ -1,30 +1,23 @@
 // ═══════════════════════════════════════════════════════════════
-// Gift Response Service — Firestore CRUD for giftResponses
-// Stores the latest response/choices per giftId.
+// Gift Response Service — latest response/choices per giftId
 // ═══════════════════════════════════════════════════════════════
 
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase";
+import { getDoc, mergeDoc, nowIso, rowToDoc } from "../lib/docs";
 
-const COLLECTION = "giftResponses";
+const TABLE = "gift_responses";
 
 export async function saveGiftResponse(giftId, choices) {
   if (!giftId) throw new Error("giftId is required");
-  await setDoc(
-    doc(db, COLLECTION, String(giftId)),
-    {
-      giftId: String(giftId),
-      choices: choices || {},
-      respondedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
+  const now = nowIso();
+  await mergeDoc(TABLE, String(giftId), {
+    giftId: String(giftId),
+    choices: choices || {},
+    respondedAt: now,
+    updatedAt: now,
+  });
 }
 
 export async function getGiftResponse(giftId) {
   if (!giftId) return null;
-  const snap = await getDoc(doc(db, COLLECTION, String(giftId)));
-  if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  return rowToDoc(await getDoc(TABLE, String(giftId)));
 }

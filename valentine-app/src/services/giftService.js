@@ -1,100 +1,84 @@
 // ═══════════════════════════════════════════════════════════════
-// Gift Service — Firestore CRUD for gifts collection
+// Gift Service — CRUD for the `gifts` table (Supabase)
+// Row: { id, user_id, data (gift body), view_count, created_at, updated_at }
 // ═══════════════════════════════════════════════════════════════
 
-import {
-  collection,
-  doc,
-  addDoc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  getDocs,
-  serverTimestamp,
-  increment,
-} from "firebase/firestore";
-import { db } from "../firebase";
+import { supabase } from "../supabase";
+import { nowIso } from "../lib/docs";
 
-const COLLECTION = "gifts";
+const TABLE = "gifts";
 
 /**
- * Deep-sanitize an object for Firestore compatibility.
- * - Strips undefined values (Firestore rejects them)
- * - Converts NaN/Infinity to null
- * - Preserves arrays, nested objects, strings, numbers, booleans
- * - Removes functions / symbols
+ * Deep-clean an object so it is valid JSON:
+ * strips undefined / functions / symbols, turns NaN/Infinity into null.
  */
-function sanitizeForFirestore(obj) {
+function sanitize(obj) {
   if (obj === null || obj === undefined) return null;
   if (typeof obj === "string" || typeof obj === "boolean") return obj;
-  if (typeof obj === "number") {
-    if (Number.isNaN(obj) || !Number.isFinite(obj)) return null;
-    return obj;
-  }
+  if (typeof obj === "number") return Number.isFinite(obj) ? obj : null;
   if (typeof obj === "function" || typeof obj === "symbol") return undefined;
-
-  if (Array.isArray(obj)) {
-    return obj.map(sanitizeForFirestore).filter((v) => v !== undefined);
-  }
-
+  if (obj instanceof Date) return obj.toISOString();
+  if (Array.isArray(obj)) return obj.map(sanitize).filter((v) => v !== undefined);
   if (typeof obj === "object") {
-    // Preserve Firestore Timestamps and special objects (they have toMillis, etc.)
-    if (obj.toMillis || obj._methodName) return obj;
-
     const clean = {};
     for (const [key, value] of Object.entries(obj)) {
-      const sanitized = sanitizeForFirestore(value);
-      if (sanitized !== undefined) {
-        clean[key] = sanitized;
-      }
+      const v = sanitize(value);
+      if (v !== undefined) clean[key] = v;
     }
     return clean;
   }
-
   return obj;
 }
 
-/**
- * Save a new gift to Firestore. Returns the generated document ID.
- */
-export async function saveGift(gift, userId) {
-  const raw = {
-    ...gift,
-    userId,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+/** DB row → the gift object the UI uses */
+function rowToGift(row) {
+  if (!row) return null;
+  return {
+    ...(row.data || {}),
+    id: row.id,
+    userId: row.user_id ?? row.data?.userId ?? null,
+    viewCount: row.view_count ?? 0,
   };
+}
+
+/** Strip fields that live in columns, not in `data` */
+function toData(gift) {
+  const raw = { ...gift };
   delete raw.id;
-
-  // Deep-sanitize to prevent Firestore serialization issues
-  const payload = sanitizeForFirestore(raw);
-  // Re-apply server timestamps (sanitizer might not preserve sentinel values)
-  payload.createdAt = serverTimestamp();
-  payload.updatedAt = serverTimestamp();
-
-  const docRef = await addDoc(collection(db, COLLECTION), payload);
-  return docRef.id;
+  delete raw.viewCount;
+  return sanitize(raw);
 }
 
 /**
- * Update an existing gift in Firestore.
- * Uses setDoc with merge to ensure ALL fields are written,
- * including deeply nested arrays like sections.
+ * Save a new gift. Returns the generated ID.
+ */
+export async function saveGift(gift, userId) {
+  const now = nowIso();
+  const data = toData({ ...gift, userId, createdAt: now, updatedAt: now });
+  const { data: row, error } = await supabase
+    .from(TABLE)
+    .insert({ user_id: userId, data })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return row.id;
+}
+
+/**
+ * Update an existing gift (shallow merge into the stored body).
+ * Payment fields (paidTier, creditUsed, expiresAt…) are protected by the
+ * database and only change through payments / credits.
  */
 export async function updateGift(giftId, gift) {
-  const raw = { ...gift, updatedAt: serverTimestamp() };
-  delete raw.id;
-
-  // Deep-sanitize
-  const payload = sanitizeForFirestore(raw);
-  payload.updatedAt = serverTimestamp();
-
-  // Use setDoc with merge: true to reliably write the entire document
-  // This avoids updateDoc's issues with nested array replacement
-  await setDoc(doc(db, COLLECTION, giftId), payload, { merge: true });
+  const { data: current, error: readErr } = await supabase
+    .from(TABLE)
+    .select("data")
+    .eq("id", giftId)
+    .single();
+  if (readErr) throw readErr;
+  const data = { ...(current.data || {}), ...toData(gift), updatedAt: nowIso() };
+  const { error } = await supabase.from(TABLE).update({ data }).eq("id", giftId);
+  if (error) throw error;
 }
 
 /**
@@ -110,41 +94,43 @@ export async function saveOrUpdateGift(gift, userId) {
 }
 
 /**
- * Get a single gift by document ID.
+ * Get a single gift by ID.
  */
 export async function getGift(giftId) {
-  const snap = await getDoc(doc(db, COLLECTION, giftId));
-  if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  const { data, error } = await supabase.from(TABLE).select("*").eq("id", giftId).maybeSingle();
+  if (error) throw error;
+  return rowToGift(data);
 }
 
 /**
  * Get all gifts for a specific user.
  */
 export async function getUserGifts(userId) {
-  const q = query(collection(db, COLLECTION), where("userId", "==", userId));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const { data, error } = await supabase.from(TABLE).select("*").eq("user_id", userId);
+  if (error) throw error;
+  return (data || []).map(rowToGift);
 }
 
 /**
- * Delete a gift by document ID.
+ * Delete a gift by ID.
  */
 export async function deleteGift(giftId) {
-  await deleteDoc(doc(db, COLLECTION, giftId));
+  const { error } = await supabase.from(TABLE).delete().eq("id", giftId);
+  if (error) throw error;
 }
 
 /**
- * Increment the view counter for a gift.
- * Called when a recipient opens the gift preview page.
+ * Increment the view counter (called when a recipient opens the gift).
  */
 export async function incrementViewCount(giftId) {
-  try {
-    await updateDoc(doc(db, COLLECTION, giftId), {
-      viewCount: increment(1),
-      lastViewedAt: serverTimestamp(),
-    });
-  } catch (err) {
-    console.warn("Failed to increment view count:", err);
-  }
+  const { error } = await supabase.rpc("increment_gift_view", { p_gift_id: giftId });
+  if (error) console.warn("Failed to increment view count:", error);
+}
+
+/**
+ * Mark a gift whose paid period ended as expired (anyone may do this).
+ */
+export async function markGiftExpired(giftId) {
+  const { error } = await supabase.rpc("mark_gift_expired", { p_gift_id: giftId });
+  if (error) console.warn("Failed to mark gift expired:", error);
 }

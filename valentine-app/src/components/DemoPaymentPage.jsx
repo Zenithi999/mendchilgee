@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { MdAutoAwesome, MdCheck } from "react-icons/md";
 import "./DemoPaymentPage.css";
+import { apiFetch } from "../supabase";
 
-const FUNCTIONS_BASE =
-  import.meta.env.VITE_FUNCTIONS_BASE_URL ||
-  `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
 
 const PLANS = [
   {
@@ -44,9 +42,8 @@ export default function DemoPaymentPage() {
     setLoading(plan);
     setError(null);
     try {
-      const res = await fetch(`${FUNCTIONS_BASE}/createBylCheckout`, {
+      const res = await apiFetch("/createBylCheckout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
       });
       const json = await res.json();

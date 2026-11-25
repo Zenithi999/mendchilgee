@@ -1,68 +1,71 @@
 // ═══════════════════════════════════════════════════════════════
-// Storage Service — Firebase Storage
+// Storage Service — Supabase Storage (bucket "media", public)
+// File name kept so existing imports keep working.
+// Paths are always  <kind>/<userId>/<file>  — the bucket policy only lets
+// a user upload into their own <userId> folder.
 // ═══════════════════════════════════════════════════════════════
 
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebase";
+import { supabase, SUPABASE_URL } from "../supabase";
+
+const BUCKET = "media";
+const SUPABASE_KEY =
+  import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+const rand = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+const extOf = (file, fallback) => file.name?.split(".").pop()?.toLowerCase() || fallback;
+
+async function currentUserId() {
+  const { data } = await supabase.auth.getSession();
+  const id = data.session?.user?.id;
+  if (!id) throw new Error("Нэвтэрсний дараа файл оруулна уу");
+  return { id, token: data.session.access_token };
+}
 
 /**
- * Upload a file to Firebase Storage with progress tracking.
- *
- * @param {File} file - The file to upload
- * @param {string} storagePath - Full path in Firebase Storage
- * @param {Function} [onProgress] - Progress callback (0-100)
- * @returns {Promise<string>} Download URL
+ * Upload with progress (XHR — supabase-js has no progress events).
+ * @returns {Promise<string>} public URL
  */
-function uploadToFirebase(file, storagePath, onProgress) {
-  return new Promise((resolve, reject) => {
-    const storageRef = ref(storage, storagePath);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+async function uploadToStorage(file, path, onProgress) {
+  const { token } = await currentUserId();
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+  const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${encodedPath}`;
 
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        if (onProgress) {
-          const pct = Math.round(
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100,
-          );
-          onProgress(pct);
-        }
-      },
-      (error) => {
-        console.error("Firebase Storage upload error:", error);
-        reject(error);
-      },
-      async () => {
-        const url = await getDownloadURL(uploadTask.snapshot.ref);
-        resolve(url);
-      },
-    );
+  await new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.setRequestHeader("apikey", SUPABASE_KEY);
+    xhr.setRequestHeader("x-upsert", "false");
+    xhr.setRequestHeader("cache-control", "max-age=31536000");
+    if (file.type) xhr.setRequestHeader("Content-Type", file.type);
+    xhr.upload.onprogress = (e) => {
+      if (onProgress && e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve();
+      console.error("Storage upload error:", xhr.status, xhr.responseText);
+      reject(new Error(xhr.status === 413 ? "Файл хэт том байна" : "Файл оруулахад алдаа гарлаа"));
+    };
+    xhr.onerror = () => reject(new Error("Сүлжээний алдаа"));
+    xhr.send(file);
   });
+
+  return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
 // ═══════════════════════════════════════════════════════════════
-// URL helpers — passthrough (no server-side transforms for Firebase)
-// Kept so existing imports don't break.
+// URL helpers — passthrough, kept so existing imports don't break.
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Return the image URL as-is (Firebase Storage doesn't support transforms).
- */
 export function optimizedImageUrl(url) {
   return url || "";
 }
 
-/**
- * Return the video URL as-is.
- */
 export function optimizedVideoUrl(url) {
   return url || "";
 }
 
-/**
- * Return the video URL as a "thumbnail" — for Firebase we just return the
- * video URL itself; the browser / <video> element will show the first frame.
- */
 export function videoThumbnailUrl(url) {
   return url || "";
 }
@@ -71,62 +74,36 @@ export function videoThumbnailUrl(url) {
 // App-specific upload helpers
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Upload a memory photo to Firebase Storage.
- * @param {File} file
- * @param {string} userId
- * @param {Function} [onProgress]
- * @returns {Promise<string>} Download URL
- */
-export async function uploadMemoryPhoto(file, userId, onProgress) {
-  const ext = file.name?.split(".").pop() || "jpg";
-  const path = `memories/${userId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-  return uploadToFirebase(file, path, onProgress);
+/** Upload a memory photo. Returns its public URL. */
+export async function uploadMemoryPhoto(file, _userId, onProgress) {
+  const { id } = await currentUserId();
+  return uploadToStorage(file, `memories/${id}/${rand()}.${extOf(file, "jpg")}`, onProgress);
 }
 
-/**
- * Upload a memory photo with progress tracking.
- */
 export function uploadMemoryPhotoWithProgress(file, userId, onProgress) {
   return uploadMemoryPhoto(file, userId, onProgress);
 }
 
-/**
- * Upload a memory video to Firebase Storage.
- * @param {File} file
- * @param {string} userId
- * @param {Function} [onProgress]
- * @returns {Promise<string>} Download URL
- */
-export async function uploadMemoryVideo(file, userId, onProgress) {
-  const ext = file.name?.split(".").pop() || "mp4";
-  const path = `videos/${userId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-  return uploadToFirebase(file, path, onProgress);
+/** Upload a memory video. Returns its public URL. */
+export async function uploadMemoryVideo(file, _userId, onProgress) {
+  const { id } = await currentUserId();
+  return uploadToStorage(file, `videos/${id}/${rand()}.${extOf(file, "mp4")}`, onProgress);
 }
 
-/**
- * Upload profile/couple photo.
- */
-export async function uploadCouplePhoto(file, coupleId) {
-  const ext = file.name?.split(".").pop() || "jpg";
-  const path = `couples/${coupleId}/${Date.now()}.${ext}`;
-  return uploadToFirebase(file, path);
+/** Upload profile/couple photo. */
+export async function uploadCouplePhoto(file) {
+  const { id } = await currentUserId();
+  return uploadToStorage(file, `couples/${id}/${rand()}.${extOf(file, "jpg")}`);
 }
 
-/**
- * Generic file upload.
- */
-export async function uploadFile(file, storagePath) {
-  const ext = file.name?.split(".").pop() || "bin";
-  const path = `uploads/${storagePath}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-  return uploadToFirebase(file, path);
+/** Generic file upload. */
+export async function uploadFile(file) {
+  const { id } = await currentUserId();
+  return uploadToStorage(file, `uploads/${id}/${rand()}.${extOf(file, "bin")}`);
 }
 
-/**
- * Generic upload with progress.
- */
-export function uploadFileWithProgress(file, storagePath, onProgress) {
-  const ext = file.name?.split(".").pop() || "bin";
-  const path = `uploads/${storagePath}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-  return uploadToFirebase(file, path, onProgress);
+/** Generic upload with progress. */
+export async function uploadFileWithProgress(file, _storagePath, onProgress) {
+  const { id } = await currentUserId();
+  return uploadToStorage(file, `uploads/${id}/${rand()}.${extOf(file, "bin")}`, onProgress);
 }

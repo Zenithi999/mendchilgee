@@ -124,18 +124,15 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
   return {
     plugins: [react(), googleAuthDevPlugin(env)],
+    // NEXT_PUBLIC_* lets the Supabase keys use the names from the Supabase dashboard
+    envPrefix: ["VITE_", "NEXT_PUBLIC_"],
     build: {
       rollupOptions: {
         output: {
           manualChunks: {
             // Split vendor chunks so app code loads faster
             "vendor-react": ["react", "react-dom", "react-router-dom"],
-            "vendor-firebase": [
-              "firebase/app",
-              "firebase/auth",
-              "firebase/firestore",
-              "firebase/storage",
-            ],
+            "vendor-supabase": ["@supabase/supabase-js"],
             "vendor-icons": ["react-icons/md"],
           },
         },
