@@ -2,7 +2,7 @@
 // Supabase Edge Function "api" — BYL payments (replaces Firebase functions)
 //
 //   POST /api/createBylCheckout     tier upgrade checkout (legacy demo)
-//   POST /api/createCreditCheckout  gift / plan / credit checkout (login required)
+//   POST /api/createCreditCheckout  gift / plan / tree / credit checkout (login required)
 //   POST /api/bylWebhook            BYL webhook
 //   GET  /api/checkPaymentStatus    poll tier payment
 //   GET  /api/checkCreditPayment    poll gift / credit payment
@@ -44,6 +44,8 @@ const EXTRA_VID_PRICE = 500;
 const VIDEO_CHUNK_SECONDS = 10;
 const INCLUDED_VIDEO_SECONDS = 15;
 const PLAN_PRICES: Record<string, number> = { basic: 5000, standard: 8000, premium: 12000 };
+// Letter trees: capacity → price (mirror of src/components/LetterTree/pricing.js)
+const TREE_PRICES: Record<number, number> = { 10: 15000, 15: 20000, 20: 25000, 25: 30000, 30: 35000 };
 const PLAN_LABELS: Record<string, string> = { basic: "Энгийн", standard: "Стандарт", premium: "Премиум" };
 
 // ── CORS ─────────────────────────────────────────────────────────
@@ -164,6 +166,9 @@ function creditPaymentResponse(d: Record<string, any>) {
       totalAmount: d.totalAmount || d.amount || 0,
     });
   }
+  if (d.purchaseType === "tree") {
+    Object.assign(r, { treeId: d.treeId, capacity: d.capacity, totalAmount: d.totalAmount || d.amount || 0 });
+  }
   if (d.purchaseType === "plan") {
     Object.assign(r, {
       planId: d.planId,
@@ -192,6 +197,7 @@ async function forwardToAdminWebhook(ref: string) {
         purchaseType: cd.purchaseType || "credit",
         userId: pay.user_id,
         giftId: cd.giftId || null,
+        treeId: cd.treeId || null,
         amount: cd.totalAmount || cd.amount || 0,
         imageCount: cd.imageCount || 0,
         totalVideoSeconds: cd.totalVideoSeconds || 0,
@@ -271,6 +277,19 @@ async function createCreditCheckout(req: Request) {
       purchaseType: "gift", giftId, imageCount, totalVideoSeconds, videoChunks,
       extraImages, imgCost, vidCost, totalAmount: amount,
     });
+  } else if (purchaseType === "tree") {
+    const treeId = body.treeId;
+    if (!treeId) return json(req, { error: "Missing treeId" }, 400);
+    const { data: tree } = await db.from("letter_trees")
+      .select("user_id, capacity, paid").eq("id", treeId).maybeSingle();
+    if (!tree || tree.user_id !== userId) return json(req, { error: "Tree not found" }, 404);
+    if (tree.paid) return json(req, { error: "Already paid" }, 409);
+    const capacity = tree.capacity as number;
+    if (!TREE_PRICES[capacity]) return json(req, { error: "Invalid capacity" }, 400);
+    amount = TREE_PRICES[capacity];
+    clientRef = `credit_${Date.now()}_${rand}_tree`;
+    productName = `Захидлын мод (${capacity} захидал)`;
+    Object.assign(meta, { purchaseType: "tree", treeId, capacity, totalAmount: amount });
   } else if (purchaseType === "plan") {
     const planId = body.planId;
     if (!planId || !PLAN_PRICES[planId]) return json(req, { error: "Invalid planId" }, 400);

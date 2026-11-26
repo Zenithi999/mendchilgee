@@ -25,6 +25,9 @@ const TermsReacceptModal = lazy(() => import("./components/TermsReacceptModal"))
 const PromoRedeemPage = lazy(() => import("./components/PromoRedeemPage"));
 const PromoCodeModal = lazy(() => import("./components/PromoCodeModal"));
 const AdminPromoPanel = lazy(() => import("./components/AdminPromoPanel"));
+const LetterTreePage = lazy(() => import("./components/LetterTree/LetterTreePage"));
+const MyTreesPage = lazy(() => import("./components/LetterTree/MyTreesPage"));
+const TreePromoCard = lazy(() => import("./components/LetterTree/TreePromoCard"));
 
 // Mendchilgee.site — Дижитал мэндчилгээний платформ
 
@@ -78,6 +81,15 @@ function App() {
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/promo/:code" element={<PromoRedeemPage />} />
       <Route path="/preview" element={<BuilderPreview />} />
+      <Route path="/tree/:treeId" element={<LetterTreePage />} />
+      <Route
+        path="/trees"
+        element={
+          <AuthGuard>
+            <MyTreesPage />
+          </AuthGuard>
+        }
+      />
       <Route path="/:giftId" element={<GiftPreviewPage />} />
       <Route path="*" element={<MainApp />} />
     </Routes>
@@ -280,6 +292,7 @@ function MainApp() {
 
           {/* Pages */}
           {page === "list" && <NewYearBanner />}
+          {page === "list" && <TreePromoCard />}
           {page === "list" && (
             <GiftListPage
               onCreateNew={handleCreateNew}

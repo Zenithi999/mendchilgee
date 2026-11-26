@@ -78,6 +78,40 @@ export default function PaymentSuccessPage() {
       const d = paymentData || {};
       const pType = d.purchaseType || "credit";
 
+      if (pType === "tree") {
+        const totalAmount = d.totalAmount || d.amount || 0;
+        return (
+          <div className="payment-status-page">
+            <div className="status-icon" style={{ color: "#22c55e" }}>🎄</div>
+            <h1>Төлбөр амжилттай!</h1>
+            <p style={{ color: "#64748b", marginBottom: 24 }}>
+              Таны захидлын мод идэвхжлээ <MdAutoAwesome />
+            </p>
+            <div className="receipt-card">
+              <div className="receipt-header">
+                <MdReceipt style={{ fontSize: 20 }} />
+                <span>Төлбөрийн баримт</span>
+              </div>
+              <div className="receipt-row">
+                <span className="receipt-label">🎄 Захидлын мод ({d.capacity} захидал)</span>
+                <span className="receipt-amount">₮{totalAmount.toLocaleString()}</span>
+              </div>
+              <div className="receipt-divider" />
+              <div className="receipt-total">
+                <span>Нийт төлсөн</span>
+                <span className="receipt-total-amount">₮{totalAmount.toLocaleString()}</span>
+              </div>
+              <div className="receipt-badge">
+                <MdCheckCircle /> Төлбөр баталгаажсан
+              </div>
+            </div>
+            <Link to={d.treeId ? `/tree/${d.treeId}` : "/trees"} style={{ marginTop: 20 }}>
+              🎄 Модоо хуваалцах →
+            </Link>
+          </div>
+        );
+      }
+
       if (pType === "gift") {
         const extraImages = d.extraImages || 0;
         const imgCost = d.imgCost || extraImages * EXTRA_IMAGE_PRICE;

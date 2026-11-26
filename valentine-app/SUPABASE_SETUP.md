@@ -7,6 +7,10 @@ Supabase dashboard → **SQL Editor** → paste all of
 `supabase/migrations/20261125000000_init.sql` → **Run**.
 Creates the tables, security rules, credit/promo/payment functions and the `media` storage bucket.
 
+Then do the same with `supabase/migrations/20261126000000_letter_trees.sql`, which adds the
+letter trees (Захидлын мод): trees, sealed letters, and tree payments. Run it once; it's safe to re-run.
+After running it, redeploy the payment function (step 3) so it can sell trees.
+
 ## 2. Login settings
 Dashboard → **Authentication**:
 - **Sign In / Providers → Email**: turn **off** "Confirm email" (Firebase didn't require it). If you keep it on, new users must click the email link first.
